@@ -4,5 +4,5 @@ version= "0.1.0"
 edition= "2024"
 authors= ["MuteAvery"]
 description= "Just Another Shell handler, name speaks for its self this is a shell handler made for CTFs linux boot2roots"
-license= "LICENSE"
+license= "MIT"
 [dependencies]
