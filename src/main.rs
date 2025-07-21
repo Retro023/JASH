@@ -4,7 +4,6 @@
 #![allow(dead_code)]
 
 //To do stuff
-//Nice colouring/ pretty ui
 //Encryption
 //custom payloads
 //tabs (makes sessions more fluid)
