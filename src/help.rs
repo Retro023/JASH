@@ -1,7 +1,7 @@
 use colored::Colorize;
 // complete help output
 pub fn large_help_output() {
-    let version = "JASHv 0.1.2.1 Fortunate".bright_magenta().bold();
+    let version = "JASHv 0.1.2.A Fortunate".bright_magenta().bold();
     println!("{}\n", version);
     println!("{}", "Usage:".cyan().bold());
     println!("JASH [Flags] [Options]\n");
@@ -19,7 +19,7 @@ pub fn large_help_output() {
     println!("{}", "Features".cyan().bold());
     println!("  ✅ TTY-stabilized reverse shell");
     println!("  ✅ Clean UI with listener and connection banners");
-    println!("  ✅ F4 to exit shell");
+    println!("  ✅ ctrl+q to exit shell");
     println!("  ✅ Auto PTY setup and shell resizing\n");
 
     println!("{}", "Want to contribute?".bright_green().bold());
