@@ -10,7 +10,7 @@ pub fn large_help_output() {
     println!("  -p  --port <port>       set the port to listen on");
     println!("  -v --version            print the current version of JASH");
     println!("  -h  --help              print this help menu");
-    println!(" -htldr  --help-tldr      print a short tldr version of this help menu\n");
+    println!(" -t  --help-tldr      print a short tldr version of this help menu\n");
 
     println!("{}", "Examples".cyan().bold());
     println!("JASH -p 1337");
