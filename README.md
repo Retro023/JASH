@@ -21,3 +21,7 @@ JASH is a shell handler Built for Boot2Root CTFs
 ✔️Robust auto PTTY shells
 
 ✔️Auto screen adjust
+
+✔️Simple syntax
+
+
